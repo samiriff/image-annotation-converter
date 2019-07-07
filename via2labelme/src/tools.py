@@ -5,9 +5,14 @@ import matplotlib.image as mpimg
 from tqdm import tqdm
 import argparse
 import sys
+import os
 
 
 def get_pascal_json(via_json, path=Path('.'), label_mapper=None):
+    if not os.path.exists(path / via_json['filename']):
+        print(f'Image for {via_json["filename"]} not found')
+        return None
+
     pascal_json = {}
     pascal_json['version'] = '3.16.1'
     pascal_json['flags'] = {}
@@ -39,6 +44,9 @@ def get_pascal_shapes_json(via_json, label_mapper=None):
     pascal_shapes = []
     for region, attributes in via_json['regions'].items():
         via_shape_attributes = attributes['shape_attributes']
+        if via_shape_attributes['name'] != 'polygon':
+            continue
+
         via_region_attributes = attributes['region_attributes']
         pascal_shape = {}
         pascal_shape['shape_type'] = via_shape_attributes['name']
@@ -57,6 +65,8 @@ def get_pascal_shapes_json(via_json, label_mapper=None):
 
 def generate_pascal_json_file(via_json, path=Path('.'), label_mapper=None):
     pascal_json = get_pascal_json(via_json, path, label_mapper)
+    if pascal_json is None:
+        return
     json_filename = ''.join(via_json['filename'].split('.')[:-1] + ['.json'])
     with open(path / json_filename, 'w') as json_file:
         json.dump(pascal_json, json_file, indent=4)
