@@ -8,15 +8,15 @@ import sys
 import os
 
 
-def get_pascal_json(via_json, path=Path('.'), label_mapper=None):
+def get_pascal_json(via_json, path=Path('.'), label_mapper=None, scale=(1, 1)):
     if not os.path.exists(path / via_json['filename']):
         print(f'Image for {via_json["filename"]} not found')
         return None
-
+      
     pascal_json = {}
     pascal_json['version'] = '3.16.1'
     pascal_json['flags'] = {}
-    pascal_json['shapes'] = get_pascal_shapes_json(via_json, label_mapper)
+    pascal_json['shapes'] = get_pascal_shapes_json(via_json, label_mapper, scale)
     pascal_json['lineColor'] = [0, 255, 0, 128]
     pascal_json['fillColor'] = [255, 0, 0, 128]
     pascal_json['imagePath'] = via_json['filename']
@@ -40,13 +40,13 @@ def get_region_attributes_label(via_region_attributes, label_mapper=None, filena
         sys.exit(1)
 
 
-def get_pascal_shapes_json(via_json, label_mapper=None):
+def get_pascal_shapes_json(via_json, label_mapper=None, scale=(1, 1)):
     pascal_shapes = []
     for region, attributes in via_json['regions'].items():
         via_shape_attributes = attributes['shape_attributes']
         if via_shape_attributes['name'] != 'polygon':
             continue
-
+        
         via_region_attributes = attributes['region_attributes']
         pascal_shape = {}
         pascal_shape['shape_type'] = via_shape_attributes['name']
@@ -58,13 +58,13 @@ def get_pascal_shapes_json(via_json, label_mapper=None):
         pascal_shape_points = []
         pascal_shape['points'] = pascal_shape_points
         for x, y in zip(via_shape_attributes['all_points_x'], via_shape_attributes['all_points_y']):
-            pascal_shape_points.append([x, y])
+            pascal_shape_points.append([round(x * scale[0]), round(y * scale[0])])
         pascal_shapes.append(pascal_shape)
     return pascal_shapes
 
 
-def generate_pascal_json_file(via_json, path=Path('.'), label_mapper=None):
-    pascal_json = get_pascal_json(via_json, path, label_mapper)
+def generate_pascal_json_file(via_json, path=Path('.'), label_mapper=None, scale=(1, 1)):
+    pascal_json = get_pascal_json(via_json, path, label_mapper, scale)
     if pascal_json is None:
         return
     json_filename = ''.join(via_json['filename'].split('.')[:-1] + ['.json'])
@@ -72,10 +72,10 @@ def generate_pascal_json_file(via_json, path=Path('.'), label_mapper=None):
         json.dump(pascal_json, json_file, indent=4)
 
 
-def generate_pascal_json_files(path=Path('.'), jsonPath=Path('.'), label_mapper=None):
+def generate_pascal_json_files(path=Path('.'), jsonPath=Path('.'), label_mapper=None, scale=(1, 1)):
     full_via_json = json.loads(open(jsonPath).read())
     for _, via_json in tqdm(full_via_json.items()):
-        generate_pascal_json_file(via_json, path, label_mapper)
+        generate_pascal_json_file(via_json, path, label_mapper, scale)
 
 
 if __name__ == '__main__':
